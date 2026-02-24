@@ -15,9 +15,14 @@ https://developers.pismo.io/pismo-docs/reference/post-passport-v1-oauth2-token-1
 # Synopsis
 
 ```golang
+privKeyPem, errRead := os.ReadFile("key-priv.pem")
+
+privKey, errParse := jwt.ParseRSAPrivateKeyFromPEM(privKeyPem)
+
 options := oidcpismo.Options{
     TokenURL: "https://sandbox.pismolabs.io/passport/v1/oauth2/token",
     Client:   http.DefaultClient,
+    PrivKey:  privKey,
 
     TenantID: "tenant-id",
     UID:      "account-id",
@@ -29,7 +34,6 @@ options := oidcpismo.Options{
         "userexample": "user@user.com",
     },
 
-    PrivKey:  privKey,
     Issuer:   "issuer",
     Subject:  "subject",
     Audience: "audience",

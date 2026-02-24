@@ -23,20 +23,29 @@ type Options struct {
 	// If not provided, http.DefaultClient will be used.
 	Client HTTPClient
 
+	// PrivKey is the required RSA private key for signing the JWT token.
+	PrivKey *rsa.PrivateKey
+
 	//
 	// Pismo non-standard claims
 	//
 
-	TenantID     string
-	UID          string // Pismo account ID
-	Pismo        map[string]any
+	// TenantID is the required tenant_id claim for the JWT token.
+	TenantID string
+
+	// UID is the required uid claim for the JWT token, which represents the Pismo account ID.
+	UID string
+
+	// Pismo is the required map of Pismo-specific claims to include in the JWT token.
+	Pismo map[string]any
+
+	// CustomClaims is an optional map of custom claims to include in the JWT token.
 	CustomClaims map[string]any // customClaims are optional
 
 	//
 	// Standard claims
 	//
 
-	PrivKey  *rsa.PrivateKey
 	Issuer   string
 	Subject  string
 	Audience string

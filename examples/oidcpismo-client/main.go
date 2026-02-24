@@ -36,6 +36,7 @@ func main() {
 	options := oidcpismo.Options{
 		TokenURL: endpoint,
 		Client:   http.DefaultClient,
+		PrivKey:  privKey,
 
 		//
 		// These claims are non-standard claims required by Pismo.
@@ -55,7 +56,6 @@ func main() {
 		//
 		// Registered claims
 		//
-		PrivKey:  privKey,
 		Issuer:   "issuer",
 		Subject:  "subject",
 		Audience: "audience",
