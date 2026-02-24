@@ -125,7 +125,7 @@ func handlerToken(w http.ResponseWriter, r *http.Request, app *application) {
 
 	// parse jwt token
 
-	tk, errParse := jwt.Parse(tokReq.Token, func(_ *jwt.Token) (interface{}, error) {
+	tk, errParse := jwt.Parse(tokReq.Token, func(_ *jwt.Token) (any, error) {
 		return app.pubKey, nil
 	})
 	if errParse != nil {
