@@ -2,9 +2,13 @@
 package oidcpismo
 
 import (
+	"bytes"
 	"crypto/rsa"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -112,4 +116,64 @@ func NewJwt(options JwtOptions) (string, error) {
 	ss, err := token.SignedString(options.PrivKey)
 
 	return ss, err
+}
+
+// HTTPClient defines the interface for making HTTP requests. This allows us to use any HTTP client that implements this interface, such as http.DefaultClient or a custom client with timeouts and retries.
+type HTTPClient interface {
+	Do(req *http.Request) (resp *http.Response, err error)
+}
+
+// GetAccessToken requests an access token from the Pismo OIDC endpoint using the provided JWT token.
+func GetAccessToken(client HTTPClient, url string, token string) (resp Response, err error) {
+
+	reqBody := Request{Token: token}
+	jsonBody, errMarshal := json.Marshal(reqBody)
+	if errMarshal != nil {
+		err = errMarshal
+		return
+	}
+
+	reader := bytes.NewReader(jsonBody)
+
+	req, errReq := http.NewRequest("POST", url, reader)
+	if errReq != nil {
+		err = errReq
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	r, errDo := client.Do(req)
+	if errDo != nil {
+		err = errDo
+		return
+	}
+
+	defer r.Body.Close()
+
+	respBody, errRead := io.ReadAll(r.Body)
+	if errRead != nil {
+		err = errRead
+		return
+	}
+
+	if r.StatusCode != http.StatusCreated {
+		err = fmt.Errorf("unexpected status:%d body:%s", r.StatusCode, string(respBody))
+		return
+	}
+
+	err = json.Unmarshal(respBody, &resp)
+	return
+}
+
+// Request defines the request body for the Pismo OIDC endpoint when requesting an access token.
+type Request struct {
+	Token string `json:"token"`
+}
+
+// Response defines the response from the Pismo OIDC endpoint when requesting an access token.
+type Response struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    string `json:"expires_in"`
 }

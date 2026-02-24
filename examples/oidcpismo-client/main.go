@@ -2,9 +2,11 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"time"
 
@@ -15,8 +17,10 @@ import (
 func main() {
 
 	var privKeyFile string
+	var endpoint string
 
 	flag.StringVar(&privKeyFile, "privKey", "key-priv.pem", "path to the private key file")
+	flag.StringVar(&endpoint, "endpoint", "http://localhost:8080/token", "OIDC token endpoint")
 	flag.Parse()
 
 	privKeyPem, errRead := os.ReadFile(privKeyFile)
@@ -62,4 +66,22 @@ func main() {
 
 	log.Println("JWT token created successfully:")
 	fmt.Println(token)
+
+	// Use jwt token to get an access token from the OIDC provider.
+	resp, errResp := oidcpismo.GetAccessToken(
+		http.DefaultClient,
+		endpoint,
+		token,
+	)
+	if errResp != nil {
+		log.Fatalf("failed to request access token: %v", errResp)
+	}
+
+	log.Println("Access token response:")
+	fmt.Println(toJSON(resp))
+}
+
+func toJSON(v any) string {
+	jsonBytes, _ := json.MarshalIndent(v, "", "  ")
+	return string(jsonBytes)
 }

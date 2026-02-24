@@ -1,5 +1,9 @@
 # oidcpismo
 
+# Examples
+
+See the [examples](./examples).
+
 # Generate keys
 
 ```bash
