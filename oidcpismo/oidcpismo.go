@@ -70,7 +70,7 @@ var (
 	ErrMissingTenantID = errors.New("missing tenant_id claim")
 
 	// ErrMissingUID is missing uid
-	ErrMissingUID = errors.New("missing uid claim")
+	ErrMissingUID = errors.New("missing uid claim (Pismo accountId)")
 
 	// ErrMissingPismoClaims is missing pismo claims
 	ErrMissingPismoClaims = errors.New("missing pismo claims")
