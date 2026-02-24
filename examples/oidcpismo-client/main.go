@@ -14,30 +14,41 @@ import (
 
 func main() {
 
-	var pubKeyFile string
+	var privKeyFile string
 
-	flag.StringVar(&pubKeyFile, "pubKey", "key-pub.pem", "path to the public key file")
+	flag.StringVar(&privKeyFile, "privKey", "key-priv.pem", "path to the private key file")
 	flag.Parse()
 
-	pubKeyPem, errRead := os.ReadFile(pubKeyFile)
+	privKeyPem, errRead := os.ReadFile(privKeyFile)
 	if errRead != nil {
-		log.Fatalf("failed to read public key file: %s: %v", pubKeyFile, errRead)
+		log.Fatalf("failed to read private key file: %s: %v", privKeyFile, errRead)
 	}
 
-	pubKey, errParse := jwt.ParseRSAPublicKeyFromPEM(pubKeyPem)
+	privKey, errParse := jwt.ParseRSAPrivateKeyFromPEM(privKeyPem)
 	if errParse != nil {
-		log.Fatalf("failed to parse public key: %v", errParse)
+		log.Fatalf("failed to parse private key: %v", errParse)
 	}
 
 	options := oidcpismo.JwtOptions{
+		//
+		// These claims are non-standard claims required by Pismo.
+		// See: https://developers.pismo.io/pismo-docs/docs/authentication-with-openid#generate-your-jwt
+		//
 		TenantID: "tenant-id",
 		UID:      "account-id",
 		Pismo: map[string]any{
-			"account": map[string]any{
-				"id": "account-id",
-			},
+			"group": "pismo-v1:some-samplegroup:rw",
 		},
-		PubKey:   pubKey,
+		// Only CustomClaims is optional, you can omit it if you don't need to add custom claims.
+		CustomClaims: map[string]any{
+			"custom1":     "someValue",
+			"userexample": "user@user.com",
+		},
+
+		//
+		// Registered claims
+		//
+		PrivKey:  privKey,
 		Issuer:   "issuer",
 		Subject:  "subject",
 		Audience: "audience",
