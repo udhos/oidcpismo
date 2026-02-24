@@ -3,6 +3,7 @@ package oidcpismo
 
 import (
 	"bytes"
+	"context"
 	"crypto/rsa"
 	"encoding/json"
 	"errors"
@@ -161,7 +162,8 @@ type HTTPClient interface {
 }
 
 // getAccessToken requests an access token from the Pismo OIDC endpoint using the provided JWT token.
-func getAccessToken(client HTTPClient, url string, token string) (resp Response, err error) {
+func getAccessToken(ctx context.Context, client HTTPClient, url,
+	token string) (resp Response, err error) {
 
 	reqBody := Request{Token: token}
 	jsonBody, errMarshal := json.Marshal(reqBody)
@@ -172,7 +174,7 @@ func getAccessToken(client HTTPClient, url string, token string) (resp Response,
 
 	reader := bytes.NewReader(jsonBody)
 
-	req, errReq := http.NewRequest("POST", url, reader)
+	req, errReq := http.NewRequestWithContext(ctx, "POST", url, reader)
 	if errReq != nil {
 		err = errReq
 		return
@@ -219,11 +221,11 @@ type Response struct {
 
 // GetAccessToken generates a JWT token using the provided options and
 // requests an access token from the Pismo OIDC endpoint.
-func GetAccessToken(options Options) (Response, error) {
+func GetAccessToken(ctx context.Context, options Options) (Response, error) {
 	jwtToken, err := newJwt(options)
 	if err != nil {
 		return Response{}, err
 	}
 
-	return getAccessToken(options.Client, options.TokenURL, jwtToken)
+	return getAccessToken(ctx, options.Client, options.TokenURL, jwtToken)
 }

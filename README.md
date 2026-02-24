@@ -40,7 +40,7 @@ options := oidcpismo.Options{
     Expire:   time.Hour,
 }
 
-resp, errResp := oidcpismo.GetAccessToken(options)
+resp, errResp := oidcpismo.GetAccessToken(context.Background(), options)
 ```
 
 # Example

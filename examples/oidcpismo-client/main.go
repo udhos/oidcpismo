@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -62,7 +63,7 @@ func main() {
 		Expire:   time.Hour,
 	}
 
-	resp, errResp := oidcpismo.GetAccessToken(options)
+	resp, errResp := oidcpismo.GetAccessToken(context.Background(), options)
 	if errResp != nil {
 		log.Fatalf("failed to request access token: %v", errResp)
 	}
