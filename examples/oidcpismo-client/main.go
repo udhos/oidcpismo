@@ -33,7 +33,10 @@ func main() {
 		log.Fatalf("failed to parse private key: %v", errParse)
 	}
 
-	options := oidcpismo.JwtOptions{
+	options := oidcpismo.Options{
+		TokenURL: endpoint,
+		Client:   http.DefaultClient,
+
 		//
 		// These claims are non-standard claims required by Pismo.
 		// See: https://developers.pismo.io/pismo-docs/docs/authentication-with-openid#generate-your-jwt
@@ -59,20 +62,7 @@ func main() {
 		Expire:   time.Hour,
 	}
 
-	token, err := oidcpismo.NewJwt(options)
-	if err != nil {
-		log.Fatalf("failed to create JWT: %v", err)
-	}
-
-	log.Println("JWT token created successfully:")
-	fmt.Println(token)
-
-	// Use jwt token to get an access token from the OIDC provider.
-	resp, errResp := oidcpismo.GetAccessToken(
-		http.DefaultClient,
-		endpoint,
-		token,
-	)
+	resp, errResp := oidcpismo.GetAccessToken(options)
 	if errResp != nil {
 		log.Fatalf("failed to request access token: %v", errResp)
 	}

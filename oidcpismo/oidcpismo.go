@@ -14,12 +14,27 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
-// JwtOptions defines the options for creating a JWT token.
-type JwtOptions struct {
+// Options defines the options for creating a JWT token.
+type Options struct {
+	// TokenURL is the required URL of the Pismo OIDC endpoint for requesting an access token.
+	TokenURL string
+
+	// Client is optional HTTP client for making requests to the Pismo OIDC endpoint.
+	// If not provided, http.DefaultClient will be used.
+	Client HTTPClient
+
+	//
+	// Pismo non-standard claims
+	//
+
 	TenantID     string
 	UID          string // Pismo account ID
 	Pismo        map[string]any
 	CustomClaims map[string]any // customClaims are optional
+
+	//
+	// Standard claims
+	//
 
 	PrivKey  *rsa.PrivateKey
 	Issuer   string
@@ -38,6 +53,9 @@ type customClaims struct {
 }
 
 var (
+	// ErrMissingTokenURL is missing token URL
+	ErrMissingTokenURL = errors.New("missing token URL")
+
 	// ErrMissingTenantID is missing tenant_id
 	ErrMissingTenantID = errors.New("missing tenant_id claim")
 
@@ -60,11 +78,14 @@ var (
 	ErrMissingAudience = errors.New("missing audience")
 )
 
-// NewJwt creates a new JWT token with the given options.
+// newJwt creates a new JWT token with the given options.
 // See: https://developers.pismo.io/pismo-docs/docs/authentication-with-openid#generate-your-jwt
-func NewJwt(options JwtOptions) (string, error) {
+func newJwt(options Options) (string, error) {
 
 	// Bail out early if required fields are missing
+	if options.TokenURL == "" {
+		return "", ErrMissingTokenURL
+	}
 	if options.TenantID == "" {
 		return "", ErrMissingTenantID
 	}
@@ -90,7 +111,14 @@ func NewJwt(options JwtOptions) (string, error) {
 		return "", fmt.Errorf("invalid expire duration (must be between 1 minute and 1 hour): %v", options.Expire)
 	}
 
-	jwt.MarshalSingleStringAsArray = false // This is required because Pismo expects the audience claim to be a single string, not an array of strings.
+	// Default to http.DefaultClient if no client is provided
+	if options.Client == nil {
+		options.Client = http.DefaultClient
+	}
+
+	// This is required because Pismo expects the audience claim to be
+	// a single string, not an array of strings.
+	jwt.MarshalSingleStringAsArray = false
 
 	now := time.Now()
 
@@ -123,8 +151,8 @@ type HTTPClient interface {
 	Do(req *http.Request) (resp *http.Response, err error)
 }
 
-// GetAccessToken requests an access token from the Pismo OIDC endpoint using the provided JWT token.
-func GetAccessToken(client HTTPClient, url string, token string) (resp Response, err error) {
+// getAccessToken requests an access token from the Pismo OIDC endpoint using the provided JWT token.
+func getAccessToken(client HTTPClient, url string, token string) (resp Response, err error) {
 
 	reqBody := Request{Token: token}
 	jsonBody, errMarshal := json.Marshal(reqBody)
@@ -166,14 +194,27 @@ func GetAccessToken(client HTTPClient, url string, token string) (resp Response,
 	return
 }
 
-// Request defines the request body for the Pismo OIDC endpoint when requesting an access token.
+// Request defines the request body for the Pismo OIDC endpoint
+// when requesting an access token.
 type Request struct {
 	Token string `json:"token"`
 }
 
-// Response defines the response from the Pismo OIDC endpoint when requesting an access token.
+// Response defines the response from the Pismo OIDC endpoint when
+// requesting an access token.
 type Response struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 	ExpiresIn    string `json:"expires_in"`
+}
+
+// GetAccessToken generates a JWT token using the provided options and
+// requests an access token from the Pismo OIDC endpoint.
+func GetAccessToken(options Options) (Response, error) {
+	jwtToken, err := newJwt(options)
+	if err != nil {
+		return Response{}, err
+	}
+
+	return getAccessToken(options.Client, options.TokenURL, jwtToken)
 }
