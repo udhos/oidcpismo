@@ -15,7 +15,10 @@ https://developers.pismo.io/pismo-docs/reference/post-passport-v1-oauth2-token-1
 # Synopsis
 
 ```golang
-options := oidcpismo.JwtOptions{
+options := oidcpismo.Options{
+    TokenURL: "https://sandbox.pismolabs.io/passport/v1/oauth2/token",
+    Client:   http.DefaultClient,
+
     TenantID: "tenant-id",
     UID:      "account-id",
     Pismo: map[string]any{
@@ -33,15 +36,7 @@ options := oidcpismo.JwtOptions{
     Expire:   time.Hour,
 }
 
-// Generate a JWT token using the provided options.
-token, err := oidcpismo.NewJwt(options)
-
-// Request an access token from the Pismo OIDC endpoint using the generated JWT token.
-resp, errResp := oidcpismo.GetAccessToken(
-    http.DefaultClient,
-    "https://sandbox.pismolabs.io/passport/v1/oauth2/token",
-    token,
-)
+resp, errResp := oidcpismo.GetAccessToken(options)
 ```
 
 # Example
