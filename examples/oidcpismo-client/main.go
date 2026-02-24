@@ -79,6 +79,10 @@ func main() {
 
 	log.Println("Access token response:")
 	fmt.Println(toJSON(resp))
+
+	fmt.Println()
+	fmt.Println("Use access token as Authorization header:")
+	fmt.Println("Authorization: Bearer " + resp.AccessToken)
 }
 
 func toJSON(v any) string {
