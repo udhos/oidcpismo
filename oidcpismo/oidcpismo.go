@@ -214,7 +214,7 @@ type Request struct {
 // Response defines the response from the Pismo OIDC endpoint when
 // requesting an access token.
 type Response struct {
-	AccessToken  string `json:"access_token"`
+	Token        string `json:"token"`
 	RefreshToken string `json:"refresh_token"`
 	ExpiresIn    string `json:"expires_in"`
 }

@@ -174,7 +174,7 @@ func handlerToken(w http.ResponseWriter, r *http.Request, app *application) {
 	// reply with access token
 
 	var resp oidcpismo.Response
-	resp.AccessToken = accessToken
+	resp.Token = accessToken
 	resp.ExpiresIn = fmt.Sprint(int(remaining.Seconds()))
 	resp.RefreshToken = "some-refresh-token"
 	data, err := json.Marshal(&resp)
