@@ -168,7 +168,7 @@ func getAccessToken(ctx context.Context, client HTTPClient, url,
 	reqBody := Request{Token: token}
 	jsonBody, errMarshal := json.Marshal(reqBody)
 	if errMarshal != nil {
-		err = errMarshal
+		err = fmt.Errorf("failed to marshal request body: %w", errMarshal)
 		return
 	}
 
@@ -176,7 +176,7 @@ func getAccessToken(ctx context.Context, client HTTPClient, url,
 
 	req, errReq := http.NewRequestWithContext(ctx, "POST", url, reader)
 	if errReq != nil {
-		err = errReq
+		err = fmt.Errorf("failed to create HTTP request: %w", errReq)
 		return
 	}
 
@@ -184,7 +184,7 @@ func getAccessToken(ctx context.Context, client HTTPClient, url,
 
 	r, errDo := client.Do(req)
 	if errDo != nil {
-		err = errDo
+		err = fmt.Errorf("HTTP request failed: %w", errDo)
 		return
 	}
 
@@ -192,16 +192,22 @@ func getAccessToken(ctx context.Context, client HTTPClient, url,
 
 	respBody, errRead := io.ReadAll(r.Body)
 	if errRead != nil {
-		err = errRead
+		err = fmt.Errorf("failed to read response body: %w", errRead)
 		return
 	}
 
-	if r.StatusCode != http.StatusCreated {
-		err = fmt.Errorf("unexpected status:%d body:%s", r.StatusCode, string(respBody))
+	const expectedStatus = http.StatusCreated
+	if r.StatusCode != expectedStatus {
+		err = fmt.Errorf("unexpected status:%d (should be %d) body:%s",
+			r.StatusCode, expectedStatus, string(respBody))
 		return
 	}
 
-	err = json.Unmarshal(respBody, &resp)
+	if errUnmarshal := json.Unmarshal(respBody, &resp); errUnmarshal != nil {
+		err = fmt.Errorf("failed to unmarshal response body: %w", errUnmarshal)
+		return
+	}
+
 	return
 }
 
@@ -222,10 +228,18 @@ type Response struct {
 // GetAccessToken generates a JWT token using the provided options and
 // requests an access token from the Pismo OIDC endpoint.
 func GetAccessToken(ctx context.Context, options Options) (Response, error) {
-	jwtToken, err := newJwt(options)
-	if err != nil {
-		return Response{}, err
+	const me = "oidcpismo.GetAccessToken"
+	jwtToken, errJwt := newJwt(options)
+	if errJwt != nil {
+		return Response{}, fmt.Errorf("%s: failed to generate JWT token accountId=%s url=%s: %w",
+			me, options.UID, options.TokenURL, errJwt)
 	}
 
-	return getAccessToken(ctx, options.Client, options.TokenURL, jwtToken)
+	resp, errTok := getAccessToken(ctx, options.Client, options.TokenURL, jwtToken)
+	if errTok != nil {
+		return Response{}, fmt.Errorf("%s: token server error accountId=%s url=%s: %w",
+			me, options.UID, options.TokenURL, errTok)
+	}
+
+	return resp, nil
 }
