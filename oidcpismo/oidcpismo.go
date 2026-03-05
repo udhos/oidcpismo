@@ -90,9 +90,6 @@ var (
 	// ErrMissingUID is missing uid
 	ErrMissingUID = errors.New("missing uid claim (Pismo accountId)")
 
-	// ErrMissingPismoClaims is missing pismo claims
-	ErrMissingPismoClaims = errors.New("missing pismo claims")
-
 	// ErrMissingPrivateKey is missing private key
 	ErrMissingPrivateKey = errors.New("missing private key")
 
@@ -119,9 +116,6 @@ func newJwt(options Options) (string, error) {
 	}
 	if options.UID == "" {
 		return "", ErrMissingUID
-	}
-	if options.Pismo == nil {
-		return "", ErrMissingPismoClaims
 	}
 	if options.PrivKey == nil {
 		return "", ErrMissingPrivateKey
