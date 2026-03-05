@@ -51,6 +51,24 @@ type Options struct {
 	Subject  string
 	Audience string
 	Expire   time.Duration // min 1min, max 1h
+
+	// CheckHTTPResponseStatus validate server http response status.
+	// If undefined, defaults to DefaultCheckHttpResponseStatus.
+	CheckHTTPResponseStatus func(status int) error
+}
+
+// DefaultCheckHTTPResponseStatus is default check for server http
+// response status used when option CheckHttpResponseStatus is undefined.
+// It checks that response status is 201.
+func DefaultCheckHTTPResponseStatus(status int) error {
+	const expectedStatus = http.StatusCreated
+
+	if status != expectedStatus {
+		return fmt.Errorf("unexpected status:%d (expected %d)",
+			status, expectedStatus)
+	}
+
+	return nil
 }
 
 type customClaims struct {
@@ -121,11 +139,6 @@ func newJwt(options Options) (string, error) {
 		return "", fmt.Errorf("invalid expire duration (must be between 1 minute and 1 hour): %v", options.Expire)
 	}
 
-	// Default to http.DefaultClient if no client is provided
-	if options.Client == nil {
-		options.Client = http.DefaultClient
-	}
-
 	// This is required because Pismo expects the audience claim to be
 	// a single string, not an array of strings.
 	jwt.MarshalSingleStringAsArray = false
@@ -163,7 +176,7 @@ type HTTPClient interface {
 
 // getAccessToken requests an access token from the Pismo OIDC endpoint using the provided JWT token.
 func getAccessToken(ctx context.Context, client HTTPClient, url,
-	token string) (resp Response, err error) {
+	token string, checkHTTPResponseStatus func(status int) error) (resp Response, err error) {
 
 	reqBody := Request{Token: token}
 	jsonBody, errMarshal := json.Marshal(reqBody)
@@ -193,6 +206,12 @@ func getAccessToken(ctx context.Context, client HTTPClient, url,
 	respBody, errRead := io.ReadAll(r.Body)
 	if errRead != nil {
 		err = fmt.Errorf("failed to read response body: %w", errRead)
+		return
+	}
+
+	if errStatus := checkHTTPResponseStatus(r.StatusCode); errStatus != nil {
+		err = fmt.Errorf("%w body:%s",
+			errStatus, string(respBody))
 		return
 	}
 
@@ -229,13 +248,25 @@ type Response struct {
 // requests an access token from the Pismo OIDC endpoint.
 func GetAccessToken(ctx context.Context, options Options) (Response, error) {
 	const me = "oidcpismo.GetAccessToken"
+
+	// Default to http.DefaultClient if no client is provided
+	if options.Client == nil {
+		options.Client = http.DefaultClient
+	}
+
+	// Default check response status
+	if options.CheckHTTPResponseStatus == nil {
+		options.CheckHTTPResponseStatus = DefaultCheckHTTPResponseStatus
+	}
+
 	jwtToken, errJwt := newJwt(options)
 	if errJwt != nil {
 		return Response{}, fmt.Errorf("%s: failed to generate JWT token accountId=%s url=%s: %w",
 			me, options.UID, options.TokenURL, errJwt)
 	}
 
-	resp, errTok := getAccessToken(ctx, options.Client, options.TokenURL, jwtToken)
+	resp, errTok := getAccessToken(ctx, options.Client, options.TokenURL,
+		jwtToken, options.CheckHTTPResponseStatus)
 	if errTok != nil {
 		return Response{}, fmt.Errorf("%s: token server error accountId=%s url=%s: %w",
 			me, options.UID, options.TokenURL, errTok)
