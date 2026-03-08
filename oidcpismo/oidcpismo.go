@@ -203,13 +203,6 @@ func getAccessToken(ctx context.Context, client HTTPClient, url,
 		return
 	}
 
-	const expectedStatus = http.StatusCreated
-	if r.StatusCode != expectedStatus {
-		err = fmt.Errorf("unexpected status:%d (should be %d) body:%s",
-			r.StatusCode, expectedStatus, string(respBody))
-		return
-	}
-
 	if errUnmarshal := json.Unmarshal(respBody, &resp); errUnmarshal != nil {
 		err = fmt.Errorf("failed to unmarshal response body: %w", errUnmarshal)
 		return
